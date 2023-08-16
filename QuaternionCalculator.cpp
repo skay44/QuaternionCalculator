@@ -304,22 +304,150 @@ void devideIntoComplexParts(Number fragment, vector <ComplexPart>& part) {
 }
 
 
+
+
+ComplexPart simplifyComplexPart(vector<ComplexPart>& parts, bool& negative) {
+
+    //   1 i j k
+    // 1
+    // i
+    // j
+    // k
+    ComplexPart result;
+    negative = false;
+    string resultingComplexNumber[4][4] = {
+        {"","i","j","k"},
+        {"i","-","k","-j"},
+        {"j","-k","-","i"},
+        {"k","j","-i","-"}
+    };
+    for (int i = 0; i < parts.size()-1; i++) {
+        int resultL = 0;
+        int resultR = 0;
+        if (parts[i].complex == "") resultL = 0;
+        if (parts[i].complex == "i") resultL = 1;
+        if (parts[i].complex == "j") resultL = 2;
+        if (parts[i].complex == "k") resultL = 3;
+
+        if (parts[i+1].complex == "") resultR += 0;
+        if (parts[i+1].complex == "i") resultR += 1;
+        if (parts[i+1].complex == "j") resultR += 2;
+        if (parts[i+1].complex == "k") resultR += 3;
+
+        if (resultingComplexNumber[resultL][resultR][0] == '-') {
+            parts[i + 1].complex = resultingComplexNumber[resultL][resultR][1];
+            negative = !(negative);
+
+        }
+        else {
+            parts[i + 1].complex = resultingComplexNumber[resultL][resultR][0];
+        }
+    }
+    for (int i = 0; i < parts.size(); i++) {
+        result.var.append(parts[i].var);
+        if(i < parts.size()-1) result.var.append("*");
+    }
+    result.complex = parts[parts.size()-1].complex;
+    return result;
+}
+
+
+void applyResults(string& number, vector<Number> toApply) {
+    for (int i = 0; i < toApply.size(); i++) {
+        if (toApply[i].number.find("EMPTY") == string::npos) {
+            if (toApply[i].negative)
+                number.append("-");
+            else
+                number.append("+");
+            number.append(toApply[i].number);
+        }
+
+    }
+}
+
+
 string simplifyQuaternion(string equation) {
     vector<Number> fragments;
     devideIndependent(equation, fragments);
 
-    cout << "---------\n";
-    for (int i = 0; i < fragments.size(); i++) {
-        cout << fragments[i].negative << " " << fragments[i].number << "\n";
-    }
+    //cout << "---------\n";
+    //for (int i = 0; i < fragments.size(); i++) {
+    //    if (fragments[i].negative) cout << "-";
+    //    cout << fragments[i].number << "\n";
+    //}
 
     for (int i = 0; i < fragments.size(); i++) {
         vector<ComplexPart> parts;
         devideIntoComplexParts(fragments[i], parts);
 
+        bool negative;
+        ComplexPart consolidate = simplifyComplexPart(parts, negative);
+
+        if (fragments[i].negative) cout << "-";
+            cout << fragments[i].number << "\n";
+
+        Number newFragment;
+        if (negative)
+            newFragment.negative = !(fragments[i].negative);
+        else
+            newFragment.negative = fragments[i].negative;
+
+        if (consolidate.complex[0] == 0 || consolidate.complex == "")
+            consolidate.complex = '1';
+
+        newFragment.number = consolidate.complex + "*" + consolidate.var;
+
+        fragments[i] = newFragment;
+
+        //cout << "=>";
+        //if (negative) cout << "-";
+        //cout << consolidate.var << " " << consolidate.complex << "\n";
+
+        cout << "=> ";
+        if (fragments[i].negative) cout << "-";
+        cout << fragments[i].number << "\n";
     }
 
-    return "";
+    vector<Number> neutral;
+    vector<Number> xAxis;
+    vector<Number> yAxis;
+    vector<Number> zAxis;
+
+    for (int i = 0; i < fragments.size(); i++) {
+        if (fragments[i].number[0] == '1') {
+            fragments[i].number = fragments[i].number.substr(2, fragments[i].number.size() - 2);
+            neutral.push_back(fragments[i]);
+        }
+        else if (fragments[i].number[0] == 'i') {
+            fragments[i].number = fragments[i].number.substr(2, fragments[i].number.size() - 2);
+            xAxis.push_back(fragments[i]);
+        }
+        else if (fragments[i].number[0] == 'j') {
+            fragments[i].number = fragments[i].number.substr(2, fragments[i].number.size() - 2);
+            yAxis.push_back(fragments[i]);
+        }
+        else if (fragments[i].number[0] == 'k') {
+            fragments[i].number = fragments[i].number.substr(2, fragments[i].number.size() - 2);
+            zAxis.push_back(fragments[i]);
+        }
+        else {
+            SetConsoleTextAttribute(hConsole, 12);
+            cout << "ERROR";
+            SetConsoleTextAttribute(hConsole, 7);
+        }
+    }
+
+    string result;
+    result.append("<result:> ");
+    applyResults(result, neutral);
+    result.append("\n<X:> ");
+    applyResults(result, xAxis);
+    result.append("\n<Y:> ");
+    applyResults(result, yAxis);
+    result.append("\n<Z:> ");
+    applyResults(result, zAxis);
+
+    return result;
 }
 
 
@@ -341,6 +469,10 @@ int main()
 
     createTree(main);
     printTree(main);
-    cout << calculate(main);
+
+    string result = calculate(main);
+    SetConsoleTextAttribute(hConsole, 10);
+    cout << result;
+    SetConsoleTextAttribute(hConsole, 7);
 
 }
